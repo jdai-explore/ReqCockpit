@@ -1,5 +1,3 @@
-import React from 'react';
-
 const StatusCellRenderer = (props: any) => {
     const status = props.value;
     let color = 'gray';
