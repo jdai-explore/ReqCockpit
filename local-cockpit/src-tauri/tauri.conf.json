@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "local-cockpit",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.reqcockpit.dev",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -21,6 +21,22 @@
     ],
     "security": {
       "csp": null
+    },
+    "allowlist": {
+      "dialog": {
+        "open": true
+      },
+      "shell": {
+        "open": true
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "scope": [
+        "python3",
+        "python"
+      ]
     }
   },
   "bundle": {

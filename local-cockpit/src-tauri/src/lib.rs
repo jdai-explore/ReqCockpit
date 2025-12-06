@@ -91,7 +91,68 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
         import_master_spec,
         import_supplier_feedback,
-        get_cockpit_.data
+#[tauri::command]
+fn list_recent_projects(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let app_data_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or_else(|| "Could not resolve app data directory".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let script_path = app_handle.path_resolver()
+        .resolve_resource("backend/main.py")
+        .ok_or_else(|| "Could not resolve backend script path".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let output = Command::new("python3")
+        .arg(&script_path)
+        .arg("list_recent_projects")
+        .arg(&app_data_dir)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8(output.stdout).map_err(|e| e.to_string())?)
+    } else {
+        Err(String::from_utf8(output.stderr).unwrap_or_else(|_| "Unknown error".to_string()))
+    }
+}
+
+#[tauri::command(async)]
+async fn create_project(app_handle: tauri::AppHandle, name: String, path: String) -> Result<String, String> {
+    let app_data_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or_else(|| "Could not resolve app data directory".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let script_path = app_handle.path_resolver()
+        .resolve_resource("backend/main.py")
+        .ok_or_else(|| "Could not resolve backend script path".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let output = Command::new("python3")
+        .arg(&script_path)
+        .arg("create_project")
+        .arg(&app_data_dir)
+        .arg(&name)
+        .arg(&path)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8(output.stdout).map_err(|e| e.to_string())?)
+    } else {
+        Err(String::from_utf8(output.stderr).unwrap_or_else(|_| "Unknown error".to_string()))
+    }
+}
+
+
+        get_cockpit_data,
+        list_recent_projects,
+        create_project
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
