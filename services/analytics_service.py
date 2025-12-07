@@ -66,8 +66,10 @@ class AnalyticsService:
             ).count()
             
             # Count decisions
-            total_decisions = session.query(CustREDecision).filter(
-                CustREDecision.project_id == project_id
+            total_decisions = session.query(CustREDecision).join(
+                MasterRequirement
+            ).filter(
+                MasterRequirement.project_id == project_id
             ).count()
             
             return {
@@ -195,15 +197,17 @@ class AnalyticsService:
             return {}
         
         try:
-            decisions = session.query(CustREDecision).filter(
-                CustREDecision.project_id == project_id
+            decisions = session.query(CustREDecision).join(
+                MasterRequirement
+            ).filter(
+                MasterRequirement.project_id == project_id
             ).all()
             
             decision_counts = defaultdict(int)
             total_decisions = len(decisions)
             
             for decision in decisions:
-                decision_counts[decision.status] += 1
+                decision_counts[decision.decision_status] += 1
             
             return {
                 'total_decisions': total_decisions,

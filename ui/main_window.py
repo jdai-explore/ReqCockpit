@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
             if result['success']:
                 self.status_bar.showMessage(f"Project created: {project_data['name']}")
                 # Open the new project
-                self._open_project_by_path(result['db_path'])
+                self._open_project_by_path(result['project']['db_path'])
             else:
                 QMessageBox.critical(self, "Error", result['message'])
     
@@ -203,8 +203,10 @@ class MainWindow(QMainWindow):
     def _open_project_by_path(self, file_path: str):
         """Open project by file path"""
         try:
-            # Initialize database
-            db_manager.initialize(file_path)
+            # Connect to database
+            if not db_manager.connect(file_path):
+                QMessageBox.critical(self, "Error", "Failed to connect to database")
+                return
             
             # Get project from database
             session = db_manager.get_session()

@@ -4,7 +4,8 @@ Supplier and StatusMapping models for ReqCockpit
 This module defines the Supplier and StatusMapping models used to manage
 supplier information and status normalization in the requirements management system.
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, Table, Text, UniqueConstraint
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, Table, Text, UniqueConstraint, DateTime
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -34,7 +35,11 @@ class Supplier(Base):
     short_name = Column(String(50), nullable=True)
     description = Column(Text, nullable=True)
     
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
     # Relationships
+    project = relationship("Project", back_populates="suppliers")
     status_mappings = relationship(
         "StatusMapping", 
         back_populates="supplier",

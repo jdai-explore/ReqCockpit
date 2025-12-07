@@ -80,8 +80,8 @@ class SupplierFeedback(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
-    master_requirement = relationship("MasterRequirement", back_populates="feedback")
-    iteration = relationship("Iteration", back_populates="feedback")
+    master_requirement = relationship("MasterRequirement", back_populates="supplier_feedback")
+    iteration = relationship("Iteration", back_populates="supplier_feedback")
     supplier = relationship("Supplier", back_populates="feedback")
     
     def is_accepted(self) -> bool:
