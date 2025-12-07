@@ -2,7 +2,7 @@ import os
 import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .database.schema import create_database, Project
+from database.schema import create_database, Project
 
 class ProjectManager:
     def __init__(self, app_data_dir):
@@ -34,9 +34,6 @@ class ProjectManager:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Project file not found: {path}")
 
-        # Here you would typically connect to the database and perform any necessary checks
-        # For now, we'll just add it to recent projects
-
         project_name = os.path.splitext(os.path.basename(path))[0]
         self._add_to_recent_projects(project_name, path)
         return True
@@ -50,13 +47,8 @@ class ProjectManager:
 
     def _add_to_recent_projects(self, name, path):
         recent_projects = self.list_recent_projects()
-
-        # Remove any existing entry with the same path
         recent_projects = [p for p in recent_projects if p['path'] != path]
-
         recent_projects.insert(0, {'name': name, 'path': path})
-
-        # Keep only the 10 most recent projects
         recent_projects = recent_projects[:10]
 
         with open(self.recent_projects_file, 'w') as f:
