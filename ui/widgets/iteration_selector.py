@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtCore import pyqtSignal
 
 from models.base import db_manager
-from models.project import Iteration
+from models.iteration import Iteration
 
 
 class IterationSelector(QComboBox):

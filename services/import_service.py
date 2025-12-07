@@ -8,8 +8,11 @@ from typing import List, Dict, Any, Optional, Callable
 from pathlib import Path
 
 from models.base import db_manager
-from models.project import Project, Iteration, Supplier
-from models.requirement import MasterRequirement, SupplierFeedback
+from models.project import Project
+from models.iteration import Iteration
+from models.supplier import Supplier
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
 from parsers.reqif_parser import ReqIFParser
 from services.status_harmonizer import harmonizer
 from config import BATCH_IMPORT_SIZE

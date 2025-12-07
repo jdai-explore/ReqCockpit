@@ -12,7 +12,9 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor
 
 from models.base import db_manager
-from models.requirement import MasterRequirement, SupplierFeedback
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
+from models.supplier import Supplier
 from config import STATUS_COLORS, NormalizedStatus, FROZEN_COLUMNS_COUNT
 
 logger = logging.getLogger(__name__)
@@ -100,7 +102,6 @@ class CockpitView(QWidget):
             ).all()
             
             # Load suppliers
-            from models.project import Supplier
             self.suppliers = session.query(Supplier).filter(
                 Supplier.project_id == self.project_id
             ).all()

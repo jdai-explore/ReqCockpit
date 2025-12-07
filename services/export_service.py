@@ -9,8 +9,12 @@ from datetime import datetime
 import csv
 
 from models.base import db_manager
-from models.project import Project, Iteration, Supplier
-from models.requirement import MasterRequirement, SupplierFeedback, CustREDecision
+from models.project import Project
+from models.iteration import Iteration
+from models.supplier import Supplier
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
+from models.decision import CustREDecision
 from config import EXPORT_FORMATS, MAX_EXCEL_ROWS, EXCEL_SHEET_NAME
 
 logger = logging.getLogger(__name__)

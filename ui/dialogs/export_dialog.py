@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from models.base import db_manager
-from models.project import Supplier
+from models.supplier import Supplier
 from services.export_service import export_service
 
 

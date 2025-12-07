@@ -8,7 +8,8 @@ from collections import defaultdict
 
 from models.base import db_manager
 from models.project import Project
-from models.requirement import MasterRequirement, SupplierFeedback
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
 from config import NormalizedStatus
 
 logger = logging.getLogger(__name__)

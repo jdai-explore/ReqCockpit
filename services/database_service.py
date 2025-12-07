@@ -9,8 +9,12 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from models.base import db_manager
-from models.project import Project, Iteration, Supplier, StatusMapping
-from models.requirement import MasterRequirement, SupplierFeedback, CustREDecision
+from models.project import Project
+from models.iteration import Iteration
+from models.supplier import Supplier, StatusMapping
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
+from models.decision import CustREDecision
 from config import DB_EXTENSION
 
 logger = logging.getLogger(__name__)

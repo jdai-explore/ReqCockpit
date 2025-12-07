@@ -8,8 +8,12 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from models.base import db_manager
-from models.project import Project, Iteration, Supplier
-from models.requirement import MasterRequirement, SupplierFeedback, CustREDecision
+from models.project import Project
+from models.iteration import Iteration
+from models.supplier import Supplier
+from models.requirement import MasterRequirement
+from models.feedback import SupplierFeedback
+from models.decision import CustREDecision
 from config import NormalizedStatus, DecisionStatus
 
 logger = logging.getLogger(__name__)
