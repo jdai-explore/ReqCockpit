@@ -1,7 +1,7 @@
 """
 CustREDecision model for ReqCockpit
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -83,7 +83,7 @@ class CustREDecision(Base):
     
     decided_at = Column(
         DateTime, 
-        default=datetime.utcnow, 
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
         comment="Timestamp when decision was made"
     )

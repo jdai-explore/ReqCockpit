@@ -6,13 +6,13 @@ Verifies all database models, relationships, and operations work correctly.
 import pytest
 import tempfile
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Import models
 from models import (
     Base, DatabaseManager, db_manager,
-    Project, Iteration, Supplier, StatusMapping,
+    Project, Iteration, Supplier,
     MasterRequirement, SupplierFeedback, CustREDecision
 )
 
@@ -43,7 +43,7 @@ def sample_project(temp_db):
     project = Project(
         name="Test Project",
         description="A test project for unit tests",
-        created_at=datetime.utcnow()
+        db_path=temp_db
     )
     session.add(project)
     session.commit()
@@ -90,7 +90,8 @@ class TestProjectModel:
         
         project = Project(
             name="My Project",
-            description="Test description"
+            description="Test description",
+            db_path=temp_db
         )
         session.add(project)
         session.commit()
@@ -165,77 +166,16 @@ class TestSupplierModel:
         supplier = Supplier(
             project_id=sample_project,
             name="ACME Corp",
-            short_name="ACME"
+            supplier_code="ACME"
         )
         session.add(supplier)
         session.commit()
         
         assert supplier.id is not None
         assert supplier.name == "ACME Corp"
-        assert supplier.short_name == "ACME"
+        assert supplier.supplier_code == "ACME"
         
         session.close()
-    
-    def test_supplier_display_name(self, sample_project):
-        """Test supplier display name logic"""
-        session = db_manager.get_session()
-        
-        # With short name
-        supplier1 = Supplier(
-            project_id=sample_project,
-            name="Very Long Supplier Name",
-            short_name="VLS"
-        )
-        assert supplier1.get_display_name() == "VLS"
-        
-        # Without short name
-        supplier2 = Supplier(
-            project_id=sample_project,
-            name="Short",
-            short_name=None
-        )
-        assert supplier2.get_display_name() == "Short"
-        
-        session.close()
-
-
-class TestStatusMappingModel:
-    """Test StatusMapping model"""
-    
-    def test_create_mapping(self, sample_project):
-        """Test creating a status mapping"""
-        session = db_manager.get_session()
-        
-        # Create supplier first
-        supplier = Supplier(
-            project_id=sample_project,
-            name="Test Supplier"
-        )
-        session.add(supplier)
-        session.flush()
-        
-        # Create mapping
-        mapping = StatusMapping(
-            supplier_id=supplier.id,
-            original_status="OK",
-            normalized_status="Accepted"
-        )
-        session.add(mapping)
-        session.commit()
-        
-        assert mapping.id is not None
-        assert mapping.original_status == "OK"
-        assert mapping.normalized_status == "Accepted"
-        
-        session.close()
-    
-    def test_default_mappings(self):
-        """Test default mapping creation"""
-        defaults = StatusMapping.create_default_mappings()
-        
-        assert len(defaults) > 0
-        assert ("OK", "Accepted") in defaults
-        assert ("Rejected", "Rejected") in defaults
 
 
 class TestMasterRequirementModel:
@@ -326,15 +266,15 @@ class TestSupplierFeedbackModel:
             master_req_id=requirement.id,
             iteration_id=iteration.id,
             supplier_id=supplier.id,
-            supplier_status="OK",
-            supplier_status_normalized="Accepted",
-            supplier_comment="Looks good"
+            status="OK",
+            harmonized_status="Accepted",
+            comment="Looks good"
         )
         session.add(feedback)
         session.commit()
         
         assert feedback.id is not None
-        assert feedback.supplier_status == "OK"
+        assert feedback.status == "OK"
         assert feedback.is_accepted() is True
         
         session.close()
@@ -345,7 +285,7 @@ class TestSupplierFeedbackModel:
             master_req_id=1,
             iteration_id=1,
             supplier_id=1,
-            supplier_status_normalized="Clarification"
+            harmonized_status="Clarification"
         )
         
         assert feedback.is_accepted() is False
@@ -406,7 +346,7 @@ class TestCustREDecisionModel:
             iteration_id=1,
             decision_status="Modified",
             decided_by="jane.smith",
-            decided_at=datetime(2024, 1, 15, 10, 30)
+            decided_at=datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc)
         )
         
         summary = decision.get_summary()
@@ -465,7 +405,7 @@ class TestRelationships:
             master_req_id=requirement.id,
             iteration_id=iteration.id,
             supplier_id=supplier.id,
-            supplier_status="OK"
+            status="OK"
         )
         session.add(feedback)
         session.commit()

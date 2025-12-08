@@ -1,7 +1,7 @@
 """
 Master requirement model for ReqCockpit
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -84,7 +84,7 @@ class MasterRequirement(Base):
     # Timestamps
     created_at = Column(
         DateTime, 
-        default=datetime.utcnow, 
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
         comment="When requirement was imported"
     )
