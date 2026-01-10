@@ -103,49 +103,49 @@ class ExportService:
             # Build rows
             rows = []
             for req in requirements:
-                row = [req.reqif_id, req.master_text or '']
+                row = [req.reqif_id, req.text_content or '']
                 
                 # Add feedback for each supplier
                 for supplier in suppliers:
                     feedback = session.query(SupplierFeedback).filter(
-                        SupplierFeedback.requirement_id == req.id,
+                        SupplierFeedback.master_req_id == req.id,
                         SupplierFeedback.supplier_id == supplier.id
                     ).order_by(
                         SupplierFeedback.created_at.desc()
                     ).first()
-                    
+
                     if feedback:
-                        row.append(feedback.normalized_status or '')
+                        row.append(feedback.supplier_status_normalized or '')
                     else:
                         row.append('')
                 
                 # Add comments
                 for supplier in suppliers:
                     feedback = session.query(SupplierFeedback).filter(
-                        SupplierFeedback.requirement_id == req.id,
+                        SupplierFeedback.master_req_id == req.id,
                         SupplierFeedback.supplier_id == supplier.id
                     ).order_by(
                         SupplierFeedback.created_at.desc()
                     ).first()
                     
-                    if feedback and feedback.comment:
-                        row.append(feedback.comment)
+                    if feedback and feedback.supplier_comment:
+                        row.append(feedback.supplier_comment)
                     else:
                         row.append('')
                 
                 # Add decision if requested
                 if include_decisions:
                     decision = session.query(CustREDecision).filter(
-                        CustREDecision.requirement_id == req.id
+                        CustREDecision.master_req_id == req.id
                     ).order_by(
-                        CustREDecision.created_at.desc()
+                        CustREDecision.decided_at.desc()
                     ).first()
                     
                     if decision:
-                        row.append(decision.status)
+                        row.append(decision.decision_status)
                         row.append(decision.action_note or '')
                         row.append(
-                            decision.created_at.isoformat() if decision.created_at else ''
+                            decision.decided_at.isoformat() if decision.decided_at else ''
                         )
                     else:
                         row.extend(['', '', ''])
@@ -262,7 +262,7 @@ class ExportService:
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = EXCEL_SHEET_NAME
-            
+
             # Build header
             headers = ['ReqIF ID', 'Master Text']
             supplier_headers = [f'{s.name} (Status)' for s in suppliers]
@@ -285,49 +285,49 @@ class ExportService:
             
             # Write data rows
             for req in requirements:
-                row = [req.reqif_id, req.master_text or '']
-                
+                row = [req.reqif_id, req.text_content or '']
+
                 # Add feedback for each supplier
                 for supplier in suppliers:
                     feedback = session.query(SupplierFeedback).filter(
-                        SupplierFeedback.requirement_id == req.id,
+                        SupplierFeedback.master_req_id == req.id,
                         SupplierFeedback.supplier_id == supplier.id
                     ).order_by(
                         SupplierFeedback.created_at.desc()
                     ).first()
-                    
+
                     if feedback:
-                        row.append(feedback.normalized_status or '')
+                        row.append(feedback.supplier_status_normalized or '')
                     else:
                         row.append('')
-                
+
                 # Add comments
                 for supplier in suppliers:
                     feedback = session.query(SupplierFeedback).filter(
-                        SupplierFeedback.requirement_id == req.id,
+                        SupplierFeedback.master_req_id == req.id,
                         SupplierFeedback.supplier_id == supplier.id
                     ).order_by(
                         SupplierFeedback.created_at.desc()
                     ).first()
-                    
-                    if feedback and feedback.comment:
-                        row.append(feedback.comment)
+
+                    if feedback and feedback.supplier_comment:
+                        row.append(feedback.supplier_comment)
                     else:
                         row.append('')
-                
+
                 # Add decision if requested
                 if include_decisions:
                     decision = session.query(CustREDecision).filter(
-                        CustREDecision.requirement_id == req.id
+                        CustREDecision.master_req_id == req.id
                     ).order_by(
-                        CustREDecision.created_at.desc()
+                        CustREDecision.decided_at.desc()
                     ).first()
-                    
+
                     if decision:
-                        row.append(decision.status)
+                        row.append(decision.decision_status)
                         row.append(decision.action_note or '')
                         row.append(
-                            decision.created_at.isoformat() if decision.created_at else ''
+                            decision.decided_at.isoformat() if decision.decided_at else ''
                         )
                     else:
                         row.extend(['', '', ''])

@@ -8,20 +8,22 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
+from services.database_service import DatabaseService
 from services.import_service import ImportService
 
 
 class ImportWorker(QThread):
     """Worker thread for import operations"""
-    
+
     progress = pyqtSignal(int, int, str)
     finished = pyqtSignal(dict)
-    
-    def __init__(self, import_type: str, file_path: str, project_id: int = None):
+
+    def __init__(self, import_type: str, file_path: str, project_id: int = None, supplier_name: str = None):
         super().__init__()
         self.import_type = import_type
         self.file_path = file_path
         self.project_id = project_id
+        self.supplier_name = supplier_name
         self.import_service = ImportService()
     
     def run(self):
@@ -33,12 +35,23 @@ class ImportWorker(QThread):
                     progress_callback=self.progress.emit
                 )
             else:  # supplier
-                result = self.import_service.import_supplier_feedback(
-                    self.file_path,
-                    self.project_id,
-                    progress_callback=self.progress.emit
-                )
-            
+                # For now, use a default iteration - this should be improved
+                # to let user select iteration
+                if not self.supplier_name:
+                    result = {
+                        'success': False,
+                        'message': 'No supplier selected',
+                        'imported_count': 0
+                    }
+                else:
+                    iteration_id = 1  # TODO: Get from UI or create new iteration
+                    result = self.import_service.import_supplier_feedback(
+                        self.file_path,
+                        self.supplier_name,
+                        iteration_id,
+                        progress_callback=self.progress.emit
+                    )
+
             self.finished.emit(result)
         
         except Exception as e:
@@ -87,11 +100,11 @@ class ImportWizard(QDialog):
         if self.import_type == 'supplier':
             supplier_layout = QHBoxLayout()
             supplier_layout.addWidget(QLabel("Supplier:"))
-            
+
             self.supplier_combo = QComboBox()
-            # TODO: Load suppliers from database
+            self._load_suppliers()
             supplier_layout.addWidget(self.supplier_combo)
-            
+
             layout.addLayout(supplier_layout)
         
         # Progress bar
@@ -120,6 +133,34 @@ class ImportWizard(QDialog):
     def _connect_signals(self):
         """Connect signals"""
         pass
+
+    def _load_suppliers(self):
+        """Load suppliers from database for supplier selection"""
+        if self.import_type != 'supplier':
+            return
+
+        try:
+            suppliers = DatabaseService.list_suppliers()
+
+            if suppliers:
+                self.supplier_combo.clear()
+                for supplier in suppliers:
+                    self.supplier_combo.addItem(supplier['name'], supplier['id'])
+
+                # Select first supplier by default
+                if self.supplier_combo.count() > 0:
+                    self.supplier_combo.setCurrentIndex(0)
+            else:
+                # No suppliers found - add a placeholder
+                self.supplier_combo.clear()
+                self.supplier_combo.addItem("No suppliers available", -1)
+                self.supplier_combo.setEnabled(False)
+
+        except Exception as e:
+            # Handle database errors gracefully
+            self.supplier_combo.clear()
+            self.supplier_combo.addItem(f"Error loading suppliers: {str(e)}", -1)
+            self.supplier_combo.setEnabled(False)
     
     def _browse_file(self):
         """Browse for ReqIF file"""
@@ -136,22 +177,34 @@ class ImportWizard(QDialog):
     def _start_import(self):
         """Start import process"""
         file_path = self.file_input.text().strip()
-        
+
         if not file_path:
             QMessageBox.warning(self, "Validation Error", "Please select a file")
             return
-        
+
+        # For supplier import, validate supplier selection
+        if self.import_type == 'supplier':
+            if not hasattr(self, 'supplier_combo') or self.supplier_combo.currentData() == -1:
+                QMessageBox.warning(self, "Validation Error", "Please select a valid supplier")
+                return
+
         # Disable import button and show progress
         self.import_button.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_label.setVisible(True)
         self.progress_bar.setValue(0)
-        
+
+        # Get supplier name for supplier imports
+        supplier_name = None
+        if self.import_type == 'supplier':
+            supplier_name = self.supplier_combo.currentText()
+
         # Create and start worker thread
         self.import_worker = ImportWorker(
             self.import_type,
             file_path,
-            self.project_id
+            self.project_id,
+            supplier_name
         )
         self.import_worker.progress.connect(self._on_progress)
         self.import_worker.finished.connect(self._on_import_finished)

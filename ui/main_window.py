@@ -2,8 +2,9 @@
 Main application window for ReqCockpit
 """
 import logging
+import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -13,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction
 
-from config import APP_NAME, APP_VERSION, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
+from config import APP_NAME, APP_VERSION, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, RECENT_PROJECTS_FILE, MAX_RECENT_PROJECTS
 from models.base import db_manager
 from models.project import Project
 from services.database_service import DatabaseService
@@ -45,16 +46,17 @@ class MainWindow(QMainWindow):
         
         self.current_project_id: Optional[int] = None
         self.import_service = ImportService()
-        
+        self.recent_projects = []
+
         # Create UI
         self._create_menu_bar()
         self._create_toolbars()
         self._create_central_widget()
         self._create_status_bar()
-        
+
         # Connect signals
         self._connect_signals()
-        
+
         # Load recent projects or show welcome
         self._load_recent_projects()
     
@@ -95,11 +97,14 @@ class MainWindow(QMainWindow):
         file_menu.addAction(export_action)
         
         file_menu.addSeparator()
-        
+
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+
+        # Recent projects submenu
+        self._create_recent_projects_menu(file_menu)
         
         # View menu
         view_menu = menubar.addMenu("&View")
@@ -218,11 +223,14 @@ class MainWindow(QMainWindow):
                     self.current_project_id = project.id
                     self.setWindowTitle(f"{APP_NAME} v{APP_VERSION} - {project.name}")
                     self.status_bar.showMessage(f"Opened: {project.name}")
-                    
+
+                    # Add to recent projects
+                    self._add_to_recent_projects(file_path, project.name)
+
                     # Update views
                     self.cockpit_view.set_project(project.id)
                     self.dashboard_view.set_project(project.id)
-                    
+
                     self.project_opened.emit(project.id)
                 else:
                     QMessageBox.warning(self, "Warning", "No project found in database")
@@ -350,10 +358,122 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} v{APP_VERSION}")
         self.status_bar.showMessage("No project open")
     
+    def _create_recent_projects_menu(self, file_menu: QMenu):
+        """Create recent projects submenu"""
+        self.recent_menu = file_menu.addMenu("Recent &Projects")
+        self.recent_menu.setEnabled(False)  # Initially disabled until projects are loaded
+        self._update_recent_projects_menu()
+
     def _load_recent_projects(self):
-        """Load recent projects on startup"""
-        # TODO: Implement recent projects loading
-        pass
+        """Load recent projects from file on startup"""
+        try:
+            if RECENT_PROJECTS_FILE.exists():
+                with open(RECENT_PROJECTS_FILE, 'r', encoding='utf-8') as f:
+                    self.recent_projects = json.load(f)
+                self._update_recent_projects_menu()
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            # If file doesn't exist or is corrupted, start with empty list
+            self.recent_projects = []
+            logger.warning("Could not load recent projects file, starting with empty list")
+
+    def _save_recent_projects(self):
+        """Save recent projects to file"""
+        try:
+            RECENT_PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(RECENT_PROJECTS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.recent_projects, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Could not save recent projects: {e}")
+
+    def _add_to_recent_projects(self, project_path: str, project_name: str):
+        """Add a project to the recent projects list"""
+        # Remove if already exists
+        self.recent_projects = [
+            p for p in self.recent_projects
+            if p.get('path') != project_path
+        ]
+
+        # Add to beginning of list
+        self.recent_projects.insert(0, {
+            'name': project_name,
+            'path': project_path,
+            'last_opened': self._get_current_timestamp()
+        })
+
+        # Keep only the most recent projects
+        self.recent_projects = self.recent_projects[:MAX_RECENT_PROJECTS]
+
+        # Save to file
+        self._save_recent_projects()
+
+        # Update menu
+        self._update_recent_projects_menu()
+
+    def _update_recent_projects_menu(self):
+        """Update the recent projects menu with current list"""
+        self.recent_menu.clear()
+
+        if not self.recent_projects:
+            no_recent_action = QAction("No recent projects", self)
+            no_recent_action.setEnabled(False)
+            self.recent_menu.addAction(no_recent_action)
+            self.recent_menu.setEnabled(False)
+            return
+
+        self.recent_menu.setEnabled(True)
+
+        for i, project in enumerate(self.recent_projects):
+            # Create action with project name and path
+            action_text = f"{i+1}. {project['name']}"
+            action = QAction(action_text, self)
+            action.setData(project['path'])
+            action.triggered.connect(lambda checked, path=project['path']: self._open_recent_project(path))
+            self.recent_menu.addAction(action)
+
+        # Add clear recent projects option
+        self.recent_menu.addSeparator()
+        clear_action = QAction("Clear Recent Projects", self)
+        clear_action.triggered.connect(self._clear_recent_projects)
+        self.recent_menu.addAction(clear_action)
+
+    def _open_recent_project(self, project_path: str):
+        """Open a project from the recent projects list"""
+        if Path(project_path).exists():
+            self._open_project_by_path(project_path)
+        else:
+            # Remove from list if file no longer exists
+            QMessageBox.warning(
+                self,
+                "Project Not Found",
+                f"The project file '{project_path}' could not be found.\n"
+                "It will be removed from the recent projects list."
+            )
+            self.recent_projects = [
+                p for p in self.recent_projects
+                if p.get('path') != project_path
+            ]
+            self._save_recent_projects()
+            self._update_recent_projects_menu()
+
+    def _clear_recent_projects(self):
+        """Clear all recent projects"""
+        reply = QMessageBox.question(
+            self,
+            "Clear Recent Projects",
+            "Are you sure you want to clear the recent projects list?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.recent_projects = []
+            self._save_recent_projects()
+            self._update_recent_projects_menu()
+
+    def _get_current_timestamp(self) -> str:
+        """Get current timestamp in ISO format"""
+        from datetime import datetime
+        return datetime.utcnow().isoformat()
     
     def _show_about(self):
         """Show about dialog"""
